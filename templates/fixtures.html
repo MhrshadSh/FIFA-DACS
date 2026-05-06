@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Fixtures | FIFA League Tracker{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">Fixtures and results</p>
+      <h1>{{ league.name }}</h1>
+    </div>
+    <a class="button secondary" href="{{ url_for('index') }}">View table</a>
+  </section>
+
+  <section class="fixtures-list">
+    {% for fixture in league.fixtures %}
+      <article class="fixture">
+        <div class="fixture-meta">Round {{ fixture.round }}</div>
+        <div class="matchup">
+          <span>{{ fixture.home }}</span>
+          <strong>
+            {% if fixture.home_score is not none and fixture.away_score is not none %}
+              {{ fixture.home_score }} - {{ fixture.away_score }}
+            {% else %}
+              vs
+            {% endif %}
+          </strong>
+          <span>{{ fixture.away }}</span>
+        </div>
+
+        <form class="result-form" action="{{ url_for('save_result', fixture_id=fixture.id) }}" method="post">
+          <input name="home_score" type="number" min="0" value="{{ fixture.home_score if fixture.home_score is not none else '' }}" aria-label="{{ fixture.home }} score">
+          <input name="away_score" type="number" min="0" value="{{ fixture.away_score if fixture.away_score is not none else '' }}" aria-label="{{ fixture.away }} score">
+          <button class="button primary compact" type="submit">Save</button>
+        </form>
+
+        {% if fixture.home_score is not none and fixture.away_score is not none %}
+          <form action="{{ url_for('clear_result', fixture_id=fixture.id) }}" method="post">
+            <button class="button ghost compact" type="submit">Clear</button>
+          </form>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+{% endblock %}

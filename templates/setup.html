@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Setup | FIFA League Tracker{% endblock %}
+
+{% block content %}
+  <section class="form-layout">
+    <div class="form-copy">
+      <p class="eyebrow">Setup</p>
+      <h1>Build a new league</h1>
+      <p>Enter each player on a separate line. Creating a league will generate one fixture for every pair of players.</p>
+    </div>
+
+    <form class="panel" method="post">
+      <label>
+        League name
+        <input name="league_name" type="text" value="{{ league.name }}" placeholder="Friday Night FIFA">
+      </label>
+
+      <label>
+        Players
+        <textarea name="players" rows="9" placeholder="Alex&#10;Sam&#10;Jordan">{{ league.players | join('\n') }}</textarea>
+      </label>
+
+      <button class="button primary" type="submit">Create fixtures</button>
+    </form>
+  </section>
+{% endblock %}

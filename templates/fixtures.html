@@ -8,7 +8,18 @@
       <p class="eyebrow">{{ league.type }} fixtures and results</p>
       <h1>{{ league.name }}</h1>
     </div>
-    <a class="button secondary" href="{{ url_for('league_table', league_id=league.id) }}">View table</a>
+    <div class="header-actions">
+      <a class="button secondary" href="{{ url_for('league_table', league_id=league.id) }}">View table</a>
+      {% if can_edit %}
+        <form action="{{ url_for('lock_league', league_id=league.id) }}" method="post">
+          <button class="button ghost" type="submit">Lock edits</button>
+        </form>
+      {% else %}
+        <a class="button ghost" href="{{ url_for('set_league_password' if needs_password else 'unlock_league', league_id=league.id, next=request.path) }}">
+          {{ "Set edit password" if needs_password else "Unlock edits" }}
+        </a>
+      {% endif %}
+    </div>
   </section>
 
   {% if not fixtures %}
@@ -34,16 +45,20 @@
             <span>{{ fixture.away }}</span>
           </div>
 
-          <form class="result-form" action="{{ url_for('save_result', league_id=league.id, fixture_id=fixture.id) }}" method="post">
-            <input name="home_score" type="number" min="0" value="{{ fixture.home_score if fixture.home_score is not none else '' }}" aria-label="{{ fixture.home }} score">
-            <input name="away_score" type="number" min="0" value="{{ fixture.away_score if fixture.away_score is not none else '' }}" aria-label="{{ fixture.away }} score">
-            <button class="button primary compact" type="submit">Save</button>
-          </form>
-
-          {% if fixture.home_score is not none and fixture.away_score is not none %}
-            <form action="{{ url_for('clear_result', league_id=league.id, fixture_id=fixture.id) }}" method="post">
-              <button class="button ghost compact" type="submit">Clear</button>
+          {% if can_edit %}
+            <form class="result-form" action="{{ url_for('save_result', league_id=league.id, fixture_id=fixture.id) }}" method="post">
+              <input name="home_score" type="number" min="0" value="{{ fixture.home_score if fixture.home_score is not none else '' }}" aria-label="{{ fixture.home }} score">
+              <input name="away_score" type="number" min="0" value="{{ fixture.away_score if fixture.away_score is not none else '' }}" aria-label="{{ fixture.away }} score">
+              <button class="button primary compact" type="submit">Save</button>
             </form>
+
+            {% if fixture.home_score is not none and fixture.away_score is not none %}
+              <form action="{{ url_for('clear_result', league_id=league.id, fixture_id=fixture.id) }}" method="post">
+                <button class="button ghost compact" type="submit">Clear</button>
+              </form>
+            {% endif %}
+          {% else %}
+            <a class="button ghost compact" href="{{ url_for('set_league_password' if needs_password else 'unlock_league', league_id=league.id, next=request.path) }}">Unlock</a>
           {% endif %}
         </article>
       {% endfor %}

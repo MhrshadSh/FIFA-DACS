@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 app = Flask(__name__)
@@ -24,6 +25,7 @@ LEAGUE_TYPES = {
 
 @dataclass
 class Standing:
+    id: str
     name: str
     players: str
     played: int = 0
@@ -86,6 +88,7 @@ def migrate_old_league(old_league: dict[str, Any]) -> dict[str, Any]:
         "id": str(uuid4()),
         "name": old_league.get("name", "Imported League"),
         "type": "1v1",
+        "password_hash": "",
         "participants": participants,
         "fixtures": fixtures,
     }
@@ -93,6 +96,28 @@ def migrate_old_league(old_league: dict[str, Any]) -> dict[str, Any]:
 
 def get_league(store: dict[str, Any], league_id: str) -> dict[str, Any] | None:
     return next((league for league in store["leagues"] if league["id"] == league_id), None)
+
+
+def authenticated_leagues() -> list[str]:
+    return session.setdefault("authenticated_leagues", [])
+
+
+def is_league_unlocked(league: dict[str, Any]) -> bool:
+    return league["id"] in authenticated_leagues()
+
+
+def needs_password_setup(league: dict[str, Any]) -> bool:
+    return not league.get("password_hash")
+
+
+def require_edit_access(league: dict[str, Any], next_url: str):
+    if needs_password_setup(league):
+        flash("Set an edit password for this league before making changes.", "error")
+        return redirect(url_for("set_league_password", league_id=league["id"], next=next_url))
+    if not is_league_unlocked(league):
+        flash("Unlock this league before making changes.", "error")
+        return redirect(url_for("unlock_league", league_id=league["id"], next=next_url))
+    return None
 
 
 def normalize_name(value: str) -> str:
@@ -221,6 +246,7 @@ def calculate_table(league: dict[str, Any]) -> list[Standing]:
     participants = participant_map(league)
     table = {
         participant_id: Standing(
+            id=participant_id,
             name=participant_label(participant),
             players=", ".join(participant["players"]),
         )
@@ -288,6 +314,43 @@ def fixture_counts(league: dict[str, Any]) -> tuple[int, int]:
     return played, len(league["fixtures"])
 
 
+def player_matches(league: dict[str, Any], participant_id: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    participants = participant_map(league)
+    played = []
+    upcoming = []
+
+    for fixture in league["fixtures"]:
+        if participant_id not in {fixture["home_id"], fixture["away_id"]}:
+            continue
+
+        is_home = fixture["home_id"] == participant_id
+        opponent_id = fixture["away_id"] if is_home else fixture["home_id"]
+        opponent = participants.get(opponent_id)
+        if opponent is None:
+            continue
+
+        match = {
+            **fixture,
+            "venue": "Home" if is_home else "Away",
+            "opponent": participant_label(opponent),
+            "for_score": fixture["home_score"] if is_home else fixture["away_score"],
+            "against_score": fixture["away_score"] if is_home else fixture["home_score"],
+        }
+
+        if fixture.get("home_score") is None or fixture.get("away_score") is None:
+            upcoming.append(match)
+        else:
+            if match["for_score"] > match["against_score"]:
+                match["outcome"] = "Win"
+            elif match["for_score"] < match["against_score"]:
+                match["outcome"] = "Loss"
+            else:
+                match["outcome"] = "Draw"
+            played.append(match)
+
+    return played, upcoming
+
+
 @app.route("/")
 def index():
     store = load_store()
@@ -313,6 +376,7 @@ def setup():
         store = load_store()
         league_name = normalize_name(request.form.get("league_name", ""))
         league_type = request.form.get("league_type", "1v1")
+        password = request.form.get("password", "")
         raw_participants = request.form.get("participants", "")
         participants = parse_participants(league_type, raw_participants)
 
@@ -322,16 +386,21 @@ def setup():
             flash("Give your league a name before creating fixtures.", "error")
         elif len(participants) < 2:
             flash("Add at least two players or two 2v2 teams.", "error")
+        elif len(password) < 4:
+            flash("Choose an edit password with at least four characters.", "error")
         else:
             league = {
                 "id": str(uuid4()),
                 "name": league_name,
                 "type": league_type,
+                "password_hash": generate_password_hash(password),
                 "participants": participants,
                 "fixtures": generate_fixtures(participants),
             }
             store["leagues"].append(league)
             save_store(store)
+            authenticated_leagues().append(league["id"])
+            session.modified = True
             flash("League created and fixtures generated.", "success")
             return redirect(url_for("league_table", league_id=league["id"]))
 
@@ -353,6 +422,92 @@ def league_table(league_id: str):
         standings=calculate_table(league),
         played=played,
         total=total,
+        can_edit=is_league_unlocked(league),
+        needs_password=needs_password_setup(league),
+    )
+
+
+@app.route("/leagues/<league_id>/unlock", methods=["GET", "POST"])
+def unlock_league(league_id: str):
+    store = load_store()
+    league = get_league(store, league_id)
+    if league is None:
+        flash("League could not be found.", "error")
+        return redirect(url_for("index"))
+    if needs_password_setup(league):
+        return redirect(url_for("set_league_password", league_id=league_id, next=request.args.get("next", "")))
+
+    next_url = request.values.get("next") or url_for("league_table", league_id=league_id)
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if check_password_hash(league["password_hash"], password):
+            unlocked = authenticated_leagues()
+            if league_id not in unlocked:
+                unlocked.append(league_id)
+                session.modified = True
+            flash("League unlocked for editing.", "success")
+            return redirect(next_url)
+        flash("Password did not match.", "error")
+
+    return render_template("unlock.html", league=league, next_url=next_url)
+
+
+@app.route("/leagues/<league_id>/lock", methods=["POST"])
+def lock_league(league_id: str):
+    unlocked = authenticated_leagues()
+    if league_id in unlocked:
+        unlocked.remove(league_id)
+        session.modified = True
+        flash("League locked.", "success")
+    return redirect(url_for("league_table", league_id=league_id))
+
+
+@app.route("/leagues/<league_id>/password", methods=["GET", "POST"])
+def set_league_password(league_id: str):
+    store = load_store()
+    league = get_league(store, league_id)
+    if league is None:
+        flash("League could not be found.", "error")
+        return redirect(url_for("index"))
+    if not needs_password_setup(league):
+        return redirect(url_for("unlock_league", league_id=league_id, next=request.args.get("next", "")))
+
+    next_url = request.values.get("next") or url_for("league_table", league_id=league_id)
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if len(password) < 4:
+            flash("Choose an edit password with at least four characters.", "error")
+        else:
+            league["password_hash"] = generate_password_hash(password)
+            save_store(store)
+            authenticated_leagues().append(league_id)
+            session.modified = True
+            flash("Edit password saved and league unlocked.", "success")
+            return redirect(next_url)
+
+    return render_template("set_password.html", league=league, next_url=next_url)
+
+
+@app.route("/leagues/<league_id>/participants/<participant_id>")
+def participant_detail(league_id: str, participant_id: str):
+    store = load_store()
+    league = get_league(store, league_id)
+    if league is None:
+        flash("League could not be found.", "error")
+        return redirect(url_for("index"))
+
+    participant = participant_map(league).get(participant_id)
+    if participant is None:
+        flash("Player or team could not be found.", "error")
+        return redirect(url_for("league_table", league_id=league_id))
+
+    played, upcoming = player_matches(league, participant_id)
+    return render_template(
+        "participant.html",
+        league=league,
+        participant=participant,
+        played=played,
+        upcoming=upcoming,
     )
 
 
@@ -364,7 +519,13 @@ def fixtures(league_id: str):
         flash("League could not be found.", "error")
         return redirect(url_for("index"))
 
-    return render_template("fixtures.html", league=league, fixtures=decorate_fixtures(league))
+    return render_template(
+        "fixtures.html",
+        league=league,
+        fixtures=decorate_fixtures(league),
+        can_edit=is_league_unlocked(league),
+        needs_password=needs_password_setup(league),
+    )
 
 
 @app.route("/leagues/<league_id>/fixtures/<fixture_id>/result", methods=["POST"])
@@ -374,6 +535,9 @@ def save_result(league_id: str, fixture_id: str):
     if league is None:
         flash("League could not be found.", "error")
         return redirect(url_for("index"))
+    locked_response = require_edit_access(league, url_for("fixtures", league_id=league_id))
+    if locked_response:
+        return locked_response
 
     fixture = next(
         (item for item in league["fixtures"] if item["id"] == fixture_id),
@@ -407,6 +571,9 @@ def clear_result(league_id: str, fixture_id: str):
     if league is None:
         flash("League could not be found.", "error")
         return redirect(url_for("index"))
+    locked_response = require_edit_access(league, url_for("fixtures", league_id=league_id))
+    if locked_response:
+        return locked_response
 
     fixture = next(
         (item for item in league["fixtures"] if item["id"] == fixture_id),
@@ -429,6 +596,9 @@ def add_participant(league_id: str):
     if league is None:
         flash("League could not be found.", "error")
         return redirect(url_for("index"))
+    locked_response = require_edit_access(league, url_for("league_table", league_id=league_id))
+    if locked_response:
+        return locked_response
 
     participant = build_participant(league["type"], request.form)
     if participant is None:
@@ -451,6 +621,9 @@ def remove_participant(league_id: str, participant_id: str):
     if league is None:
         flash("League could not be found.", "error")
         return redirect(url_for("index"))
+    locked_response = require_edit_access(league, url_for("league_table", league_id=league_id))
+    if locked_response:
+        return locked_response
 
     original_count = len(league["participants"])
     league["participants"] = [
@@ -476,6 +649,14 @@ def remove_participant(league_id: str, participant_id: str):
 @app.route("/leagues/<league_id>/delete", methods=["POST"])
 def delete_league(league_id: str):
     store = load_store()
+    league = get_league(store, league_id)
+    if league is None:
+        flash("League could not be found.", "error")
+        return redirect(url_for("index"))
+    locked_response = require_edit_access(league, url_for("league_table", league_id=league_id))
+    if locked_response:
+        return locked_response
+
     before = len(store["leagues"])
     store["leagues"] = [league for league in store["leagues"] if league["id"] != league_id]
 

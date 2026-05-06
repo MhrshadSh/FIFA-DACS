@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ participant.name }} | FIFA League Tracker{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">{{ league.name }}</p>
+      <h1>{{ participant.name }}</h1>
+    </div>
+    <a class="button secondary" href="{{ url_for('league_table', league_id=league.id) }}">View table</a>
+  </section>
+
+  <section class="match-columns">
+    <div>
+      <h2>Played matches</h2>
+      <div class="match-list">
+        {% if played %}
+          {% for match in played %}
+            <article class="match-row">
+              <div>
+                <strong>{{ match.outcome }}</strong>
+                <span>{{ match.venue }} vs {{ match.opponent }}</span>
+              </div>
+              <b>{{ match.for_score }} - {{ match.against_score }}</b>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p class="muted">No completed matches yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div>
+      <h2>Upcoming matches</h2>
+      <div class="match-list">
+        {% if upcoming %}
+          {% for match in upcoming %}
+            <article class="match-row">
+              <div>
+                <strong>Round {{ match.round }}</strong>
+                <span>{{ match.venue }} vs {{ match.opponent }}</span>
+              </div>
+              <b>vs</b>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p class="muted">No remaining fixtures.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

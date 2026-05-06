@@ -23,21 +23,23 @@
           {% if league.type == "2v2" %}
             <th>Players</th>
           {% endif %}
-          <th>P</th>
-          <th>W</th>
-          <th>D</th>
-          <th>L</th>
-          <th>GF</th>
-          <th>GA</th>
-          <th>GD</th>
-          <th>Pts</th>
+          <th><span class="stat-abbr" title="Played: matches completed">P</span></th>
+          <th><span class="stat-abbr" title="Won: matches won">W</span></th>
+          <th><span class="stat-abbr" title="Drawn: matches drawn">D</span></th>
+          <th><span class="stat-abbr" title="Lost: matches lost">L</span></th>
+          <th><span class="stat-abbr" title="Goals For: goals scored">GF</span></th>
+          <th><span class="stat-abbr" title="Goals Against: goals conceded">GA</span></th>
+          <th><span class="stat-abbr" title="Goal Difference: goals for minus goals against">GD</span></th>
+          <th><span class="stat-abbr" title="Points: 3 for a win, 1 for a draw">Pts</span></th>
         </tr>
       </thead>
       <tbody>
         {% for standing in standings %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td class="player-name">{{ standing.name }}</td>
+            <td class="player-name">
+              <a href="{{ url_for('participant_detail', league_id=league.id, participant_id=standing.id) }}">{{ standing.name }}</a>
+            </td>
             {% if league.type == "2v2" %}
               <td>{{ standing.players }}</td>
             {% endif %}
@@ -58,50 +60,71 @@
   <div class="actions">
     <a class="button primary" href="{{ url_for('fixtures', league_id=league.id) }}">Add results</a>
     <a class="button secondary" href="{{ url_for('index') }}">All leagues</a>
+    {% if can_edit %}
+      <form action="{{ url_for('lock_league', league_id=league.id) }}" method="post">
+        <button class="button ghost" type="submit">Lock edits</button>
+      </form>
+    {% else %}
+      <a class="button ghost" href="{{ url_for('set_league_password' if needs_password else 'unlock_league', league_id=league.id, next=request.path) }}">
+        {{ "Set edit password" if needs_password else "Unlock edits" }}
+      </a>
+    {% endif %}
   </div>
 
-  <section class="manager-layout">
-    <form class="panel" action="{{ url_for('add_participant', league_id=league.id) }}" method="post">
-      <p class="eyebrow">Add {{ "team" if league.type == "2v2" else "player" }}</p>
-      {% if league.type == "2v2" %}
-        <label>
-          Player one
-          <input name="player_one" type="text" placeholder="Alex">
-        </label>
-        <label>
-          Player two
-          <input name="player_two" type="text" placeholder="Sam">
-        </label>
-      {% else %}
-        <label>
-          Player name
-          <input name="player_name" type="text" placeholder="Alex">
-        </label>
-      {% endif %}
-      <button class="button primary" type="submit">Add and create fixtures</button>
-    </form>
+  {% if can_edit %}
+    <section class="manager-layout">
+      <form class="panel" action="{{ url_for('add_participant', league_id=league.id) }}" method="post">
+        <p class="eyebrow">Add {{ "team" if league.type == "2v2" else "player" }}</p>
+        {% if league.type == "2v2" %}
+          <label>
+            Player one
+            <input name="player_one" type="text" placeholder="Alex">
+          </label>
+          <label>
+            Player two
+            <input name="player_two" type="text" placeholder="Sam">
+          </label>
+        {% else %}
+          <label>
+            Player name
+            <input name="player_name" type="text" placeholder="Alex">
+          </label>
+        {% endif %}
+        <button class="button primary" type="submit">Add and create fixtures</button>
+      </form>
 
-    <section class="panel roster-panel">
-      <p class="eyebrow">Current {{ "teams" if league.type == "2v2" else "players" }}</p>
-      <div class="roster-list">
-        {% for participant in league.participants %}
-          <article class="roster-item">
-            <div>
-              <strong>{{ participant.name }}</strong>
-              {% if league.type == "2v2" %}
-                <small>{{ participant.players | join(", ") }}</small>
-              {% endif %}
-            </div>
-            <form action="{{ url_for('remove_participant', league_id=league.id, participant_id=participant.id) }}" method="post">
-              <button class="button danger compact" type="submit">Remove</button>
-            </form>
-          </article>
-        {% endfor %}
-      </div>
+      <section class="panel roster-panel">
+        <p class="eyebrow">Current {{ "teams" if league.type == "2v2" else "players" }}</p>
+        <div class="roster-list">
+          {% for participant in league.participants %}
+            <article class="roster-item">
+              <div>
+                <a class="roster-link" href="{{ url_for('participant_detail', league_id=league.id, participant_id=participant.id) }}">
+                  <strong>{{ participant.name }}</strong>
+                </a>
+                {% if league.type == "2v2" %}
+                  <small>{{ participant.players | join(", ") }}</small>
+                {% endif %}
+              </div>
+              <form action="{{ url_for('remove_participant', league_id=league.id, participant_id=participant.id) }}" method="post">
+                <button class="button danger compact" type="submit">Remove</button>
+              </form>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
     </section>
-  </section>
 
-  <form class="delete-form" action="{{ url_for('delete_league', league_id=league.id) }}" method="post">
-    <button class="button danger" type="submit">Delete this league</button>
-  </form>
+    <form class="delete-form" action="{{ url_for('delete_league', league_id=league.id) }}" method="post">
+      <button class="button danger" type="submit">Delete this league</button>
+    </form>
+  {% else %}
+    <section class="panel locked-panel">
+      <p class="eyebrow">Editing locked</p>
+      <p>Unlock this league to add results, add or remove {{ "teams" if league.type == "2v2" else "players" }}, or delete it.</p>
+      <a class="button primary" href="{{ url_for('set_league_password' if needs_password else 'unlock_league', league_id=league.id, next=request.path) }}">
+        {{ "Set edit password" if needs_password else "Unlock edits" }}
+      </a>
+    </section>
+  {% endif %}
 {% endblock %}

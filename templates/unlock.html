@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Unlock {{ league.name }} | FIFA League Tracker{% endblock %}
+
+{% block content %}
+  <section class="form-layout">
+    <div class="form-copy">
+      <p class="eyebrow">Authentication</p>
+      <h1>Unlock edits</h1>
+      <p>Enter the league password to add results, manage players or teams, and delete the league.</p>
+    </div>
+
+    <form class="panel" method="post">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label>
+        Password
+        <input name="password" type="password" autofocus>
+      </label>
+      <button class="button primary" type="submit">Unlock league</button>
+    </form>
+  </section>
+{% endblock %}

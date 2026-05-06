@@ -295,12 +295,35 @@ textarea:focus {
   font-weight: 900;
 }
 
+.player-name a,
+.roster-link {
+  color: var(--primary-dark);
+}
+
+.player-name a:hover,
+.roster-link:hover {
+  text-decoration: underline;
+}
+
+.stat-abbr {
+  cursor: help;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
 .actions {
   align-items: center;
   display: flex;
   gap: 12px;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
 }
 
 .league-grid {
@@ -392,6 +415,60 @@ textarea:focus {
   margin-top: 18px;
 }
 
+.locked-panel {
+  align-items: start;
+  box-shadow: none;
+  margin-top: 32px;
+}
+
+.locked-panel p:not(.eyebrow) {
+  color: var(--muted);
+  margin: 0;
+}
+
+.match-columns {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.match-columns h2 {
+  font-size: 1.2rem;
+  margin: 0 0 12px;
+}
+
+.match-list {
+  display: grid;
+  gap: 12px;
+}
+
+.match-row {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.match-row strong,
+.match-row span {
+  display: block;
+}
+
+.match-row span,
+.muted {
+  color: var(--muted);
+}
+
+.match-row b {
+  color: var(--primary);
+  font-size: 1.2rem;
+  white-space: nowrap;
+}
+
 .fixtures-list {
   display: grid;
   gap: 14px;
@@ -450,6 +527,7 @@ textarea:focus {
 @media (max-width: 760px) {
   .topbar,
   .page-heading,
+  .header-actions,
   .actions {
     align-items: stretch;
     flex-direction: column;
@@ -476,7 +554,8 @@ textarea:focus {
   }
 
   .card-actions,
-  .manager-layout {
+  .manager-layout,
+  .match-columns {
     grid-template-columns: 1fr;
   }
 

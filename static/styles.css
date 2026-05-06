@@ -105,6 +105,11 @@ a {
   justify-items: start;
 }
 
+.empty-state.single {
+  display: block;
+  min-height: auto;
+}
+
 .empty-state h1,
 .form-copy h1,
 .page-heading h1 {
@@ -149,6 +154,7 @@ label {
 }
 
 input,
+select,
 textarea {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -163,6 +169,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(20, 125, 100, 0.12);
@@ -198,6 +205,10 @@ textarea:focus {
 .button.danger {
   background: transparent;
   color: var(--danger);
+}
+
+.button.danger:hover {
+  background: rgba(181, 59, 59, 0.08);
 }
 
 .button.ghost {
@@ -270,6 +281,11 @@ textarea:focus {
   text-align: left;
 }
 
+.league-table.team-table th:nth-child(3),
+.league-table.team-table td:nth-child(3) {
+  text-align: left;
+}
+
 .league-table tr:last-child td {
   border-bottom: 0;
 }
@@ -285,6 +301,95 @@ textarea:focus {
   gap: 12px;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.league-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.league-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.league-card h2 {
+  font-size: 1.45rem;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.card-stats {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: auto 1fr;
+}
+
+.card-stats span {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.card-stats small,
+.leader {
+  color: var(--muted);
+}
+
+.leader {
+  margin: 0;
+}
+
+.card-actions,
+.manager-layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.manager-layout {
+  align-items: start;
+  margin-top: 32px;
+}
+
+.roster-panel {
+  box-shadow: none;
+}
+
+.roster-list {
+  display: grid;
+  gap: 10px;
+}
+
+.roster-item {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.roster-item strong,
+.roster-item small {
+  display: block;
+}
+
+.roster-item small {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.delete-form {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
 }
 
 .fixtures-list {
@@ -368,6 +473,16 @@ textarea:focus {
   .form-layout {
     grid-template-columns: 1fr;
     min-height: auto;
+  }
+
+  .card-actions,
+  .manager-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .roster-item {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .fixture {

@@ -1,66 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}League Table | FIFA League Tracker{% endblock %}
+{% block title %}Leagues | FIFA League Tracker{% endblock %}
 
 {% block content %}
-  {% if not league.players %}
-    <section class="empty-state">
-      <h1>Create your FIFA league</h1>
-      <p>Add players, generate every fixture, then enter match results as you go.</p>
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">All leagues</p>
+      <h1>FIFA leagues</h1>
+    </div>
+    <a class="button primary" href="{{ url_for('setup') }}">Create league</a>
+  </section>
+
+  {% if not league_cards %}
+    <section class="empty-state single">
+      <h1>Create your first league</h1>
+      <p>Set up a 1v1 league or a 2v2 team league, then enter results as matches are played.</p>
       <a class="button primary" href="{{ url_for('setup') }}">Set up league</a>
     </section>
   {% else %}
-    <section class="page-heading">
-      <div>
-        <p class="eyebrow">League table</p>
-        <h1>{{ league.name }}</h1>
-      </div>
-      <div class="summary">
-        <span>{{ played }} / {{ total }}</span>
-        <small>fixtures played</small>
-      </div>
+    <section class="league-grid">
+      {% for card in league_cards %}
+        <article class="league-card">
+          <div>
+            <p class="eyebrow">{{ card.league.type }}</p>
+            <h2>{{ card.league.name }}</h2>
+          </div>
+          <div class="card-stats">
+            <span>{{ card.league.participants | length }}</span>
+            <small>{{ "teams" if card.league.type == "2v2" else "players" }}</small>
+            <span>{{ card.played }} / {{ card.total }}</span>
+            <small>played</small>
+          </div>
+          {% if card.leader %}
+            <p class="leader">Leader: <strong>{{ card.leader.name }}</strong> with {{ card.leader.points }} pts</p>
+          {% else %}
+            <p class="leader">No participants yet</p>
+          {% endif %}
+          <div class="card-actions">
+            <a class="button primary" href="{{ url_for('league_table', league_id=card.league.id) }}">Open</a>
+            <a class="button secondary" href="{{ url_for('fixtures', league_id=card.league.id) }}">Fixtures</a>
+          </div>
+        </article>
+      {% endfor %}
     </section>
-
-    <section class="table-wrap">
-      <table class="league-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Player</th>
-            <th>P</th>
-            <th>W</th>
-            <th>D</th>
-            <th>L</th>
-            <th>GF</th>
-            <th>GA</th>
-            <th>GD</th>
-            <th>Pts</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for standing in standings %}
-            <tr>
-              <td>{{ loop.index }}</td>
-              <td class="player-name">{{ standing.name }}</td>
-              <td>{{ standing.played }}</td>
-              <td>{{ standing.won }}</td>
-              <td>{{ standing.drawn }}</td>
-              <td>{{ standing.lost }}</td>
-              <td>{{ standing.goals_for }}</td>
-              <td>{{ standing.goals_against }}</td>
-              <td>{{ standing.goal_difference }}</td>
-              <td class="points">{{ standing.points }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </section>
-
-    <div class="actions">
-      <a class="button primary" href="{{ url_for('fixtures') }}">Add results</a>
-      <form action="{{ url_for('reset') }}" method="post">
-        <button class="button danger" type="submit">Reset league</button>
-      </form>
-    </div>
   {% endif %}
 {% endblock %}

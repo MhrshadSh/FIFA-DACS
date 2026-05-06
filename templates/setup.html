@@ -7,18 +7,26 @@
     <div class="form-copy">
       <p class="eyebrow">Setup</p>
       <h1>Build a new league</h1>
-      <p>Enter each player on a separate line. Creating a league will generate one fixture for every pair of players.</p>
+      <p>Choose a 1v1 league or a 2v2 team league. Creating a league generates one fixture for every player or team pairing.</p>
     </div>
 
     <form class="panel" method="post">
       <label>
         League name
-        <input name="league_name" type="text" value="{{ league.name }}" placeholder="Friday Night FIFA">
+        <input name="league_name" type="text" placeholder="Friday Night FIFA">
       </label>
 
       <label>
-        Players
-        <textarea name="players" rows="9" placeholder="Alex&#10;Sam&#10;Jordan">{{ league.players | join('\n') }}</textarea>
+        League type
+        <select name="league_type">
+          <option value="1v1">1v1 players</option>
+          <option value="2v2">2v2 teams</option>
+        </select>
+      </label>
+
+      <label>
+        Players or teams
+        <textarea name="participants" rows="9" placeholder="1v1:&#10;Alex&#10;Sam&#10;Jordan&#10;&#10;2v2:&#10;Alex / Sam&#10;Jordan / Taylor"></textarea>
       </label>
 
       <button class="button primary" type="submit">Create fixtures</button>

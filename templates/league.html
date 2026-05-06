@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ league.name }} | FIFA League Tracker{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">{{ league.type }} league table</p>
+      <h1>{{ league.name }}</h1>
+    </div>
+    <div class="summary">
+      <span>{{ played }} / {{ total }}</span>
+      <small>fixtures played</small>
+    </div>
+  </section>
+
+  <section class="table-wrap">
+    <table class="league-table {{ 'team-table' if league.type == '2v2' else '' }}">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{{ "Team" if league.type == "2v2" else "Player" }}</th>
+          {% if league.type == "2v2" %}
+            <th>Players</th>
+          {% endif %}
+          <th>P</th>
+          <th>W</th>
+          <th>D</th>
+          <th>L</th>
+          <th>GF</th>
+          <th>GA</th>
+          <th>GD</th>
+          <th>Pts</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for standing in standings %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td class="player-name">{{ standing.name }}</td>
+            {% if league.type == "2v2" %}
+              <td>{{ standing.players }}</td>
+            {% endif %}
+            <td>{{ standing.played }}</td>
+            <td>{{ standing.won }}</td>
+            <td>{{ standing.drawn }}</td>
+            <td>{{ standing.lost }}</td>
+            <td>{{ standing.goals_for }}</td>
+            <td>{{ standing.goals_against }}</td>
+            <td>{{ standing.goal_difference }}</td>
+            <td class="points">{{ standing.points }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <div class="actions">
+    <a class="button primary" href="{{ url_for('fixtures', league_id=league.id) }}">Add results</a>
+    <a class="button secondary" href="{{ url_for('index') }}">All leagues</a>
+  </div>
+
+  <section class="manager-layout">
+    <form class="panel" action="{{ url_for('add_participant', league_id=league.id) }}" method="post">
+      <p class="eyebrow">Add {{ "team" if league.type == "2v2" else "player" }}</p>
+      {% if league.type == "2v2" %}
+        <label>
+          Player one
+          <input name="player_one" type="text" placeholder="Alex">
+        </label>
+        <label>
+          Player two
+          <input name="player_two" type="text" placeholder="Sam">
+        </label>
+      {% else %}
+        <label>
+          Player name
+          <input name="player_name" type="text" placeholder="Alex">
+        </label>
+      {% endif %}
+      <button class="button primary" type="submit">Add and create fixtures</button>
+    </form>
+
+    <section class="panel roster-panel">
+      <p class="eyebrow">Current {{ "teams" if league.type == "2v2" else "players" }}</p>
+      <div class="roster-list">
+        {% for participant in league.participants %}
+          <article class="roster-item">
+            <div>
+              <strong>{{ participant.name }}</strong>
+              {% if league.type == "2v2" %}
+                <small>{{ participant.players | join(", ") }}</small>
+              {% endif %}
+            </div>
+            <form action="{{ url_for('remove_participant', league_id=league.id, participant_id=participant.id) }}" method="post">
+              <button class="button danger compact" type="submit">Remove</button>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  </section>
+
+  <form class="delete-form" action="{{ url_for('delete_league', league_id=league.id) }}" method="post">
+    <button class="button danger" type="submit">Delete this league</button>
+  </form>
+{% endblock %}
